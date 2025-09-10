@@ -1,3 +1,5 @@
+#src\task3.py
+
 def check_num(num):
     if num > 0:
         return "pos"
