@@ -15,7 +15,7 @@ def test_valid_inputs():
 
     # test no discount
     assert calculate_discount(80.0, 0) == 80.0
-    assert calculate_discount(80, 0) == 80
+    assert calculate_discount(80, 0.00) == 80
 
     # test full discount
     assert calculate_discount(80.0, 100) == 0.00
