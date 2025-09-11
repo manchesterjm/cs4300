@@ -31,9 +31,8 @@ def test_invalid_discounts():
     assert "discount is invalid" in calculate_discount(10, 100.01)
 
 def test_invalid_prices():
-    # test with price = 0
+    # test with invalid price ranges
     assert "price is not valid" in calculate_discount(0, 10)
-    # test with price < 0
     assert "price is not valid" in calculate_discount(-10, 10)
 
 def test_with_strings():
