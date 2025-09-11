@@ -5,17 +5,21 @@ def _is_valid(x):
     return type(x) in (int, float)
 
 def calculate_discount(price, discount):
+    # check if the input price and discount are vaild int or float
     if not _is_valid(price) or not _is_valid(discount):
         return f"price or discount is not valid, please enter either an int or float value"
 
-    if price < 0:
+    # check if price is a pos int and not 0
+    if price <= 0:
         return f"price is not valid, it must be a postive int or float greater than 0"
     
-    if (0.00 < discount < 1.00):
+    # check if input discount is valid
+    if isinstance(discount, float) and (0.00 <= discount <= 1.00): # need this check for floats if user inputs 0.50 as 50% discount
         new_discount = discount
     elif (0 <= discount <= 100):
-        new_discount = discount / 100
+        new_discount = discount / 100 # convert int discount to float
     else:
-        return f"discount is invalid, it must int 0<=>100 or float 0.00<=>1.00"
+        return f"discount is invalid, it must be int 0<=>100 or float 0.00<=>1.00"
 
-    return (price * new_discount)
+    # all checks pass
+    return (price - price * new_discount)
