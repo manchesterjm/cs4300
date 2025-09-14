@@ -1,3 +1,5 @@
+# test\test_task2.py
+
 import pytest
 from task2 import add, multiply, greet_name, is_positive
 
@@ -20,7 +22,7 @@ def test_is_positive():
     assert is_positive(0) is False
     assert is_positive(-3) is False
 
-################################ 
+################################ ChatGPT Code ################################################
 
 @pytest.mark.parametrize("a,b,expected", [(2, 3, 5), (-1, 1, 0), (0, 0, 0)])
 def test_add_param(a, b, expected):
