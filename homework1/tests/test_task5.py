@@ -30,6 +30,12 @@ def test_print_book_func():
 
 student_ids = list(student_database.keys())
 l_names = list(student_database.values())
+db_length = len(student_database)
+
+def test_lengths_ids_lnames():
+    # find the length of the database and test that we have the same number of
+    # ids and names
+    assert db_length == len(l_names) == len(student_ids)
 
 def test_database_is_dict():
     # the database needs to be a dictionary
