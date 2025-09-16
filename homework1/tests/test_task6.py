@@ -33,11 +33,7 @@ def test_count_words_readme():
     ("one\ntwo\tthree", 3),
     ("one\ntwo three four ", 4),
 ])
-
-    # create a temp file from the cases for testing count_words and read_file
-    for text, expected in cases:
-        p = tmp_path / "t.txt"
-        p.write_text(text, encoding="utf-8") # I found I needed to specify encoding since I specifiy reading it as such
-
-        # test that the function returns the expected number of words
-        assert count_words(str(p)) == expected
+def test_count_words_cases_param(tmp_path, text, expected):
+    p = tmp_path / "t.txt"
+    p.write_text(text, encoding="utf-8")
+    assert count_words(str(p)) == expected
