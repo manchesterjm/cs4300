@@ -16,7 +16,7 @@ def test_count_words_readme():
     # and now we count the words
     assert count_words(path) == 125
 
-def test_count_words_cases_loop(tmp_path):
+''' def test_count_words_cases_loop(tmp_path):
     # create cases that we can throw at my functions for testing
     cases = [
         ("", 0),
@@ -24,7 +24,15 @@ def test_count_words_cases_loop(tmp_path):
         ("one two", 2),
         ("one\ntwo\tthree", 3),
         ("one\ntwo three four ", 4),
-    ]
+    ] '''
+
+@pytest.mark.parametrize("text, expected", [
+    ("", 0),
+    (" ", 0),
+    ("one two", 2),
+    ("one\ntwo\tthree", 3),
+    ("one\ntwo three four ", 4),
+])
 
     # create a temp file from the cases for testing count_words and read_file
     for text, expected in cases:

@@ -3,6 +3,7 @@
 import pytest
 from task2 import add, multiply, greet_name, is_positive
 
+'''
 def test_add_integers():
     assert add(2, 3) == 5
     assert add(-1, 1) == 0
@@ -22,7 +23,7 @@ def test_is_positive():
     assert is_positive(0) is False
     assert is_positive(-3) is False
 
-################################ ChatGPT Code ################################################
+'''
 
 @pytest.mark.parametrize("a,b,expected", [(2, 3, 5), (-1, 1, 0), (0, 0, 0)])
 def test_add_param(a, b, expected):
@@ -31,3 +32,18 @@ def test_add_param(a, b, expected):
 @pytest.mark.parametrize("a,b,expected", [(0.5, 0.5, 0.25), (2.0, 1.5, 3.0), (4.0, 0.0, 0.0)])
 def test_multiply_param(a, b, expected):
     assert multiply(a, b) == expected
+
+@pytest.mark.parametrize("name, expected", [
+    ("CS", "Hello, CS"),
+    ("World", "Hello, World"),
+])
+def test_greet_name_param(name, expected):
+    assert greet_name(name) == expected
+
+@pytest.mark.parametrize("x, expected", [
+    (5, True),
+    (0, False),
+    (-3, False),
+])
+def test_is_positive_param(x, expected):
+    assert is_positive(x) is expected
