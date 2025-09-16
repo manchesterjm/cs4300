@@ -1,5 +1,6 @@
 # tests/test_task6.py
 
+import pytest
 from task6 import read_file, count_words
 
 path = "task6_read_me.txt"
