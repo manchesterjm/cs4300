@@ -6,9 +6,15 @@ otherwise.
 
 This software is under an MIT license
 
-*********************************************
+************ END DISCLAIMER *********************************
 
 How to run code, or more plainly, how to run the tests on the code
+
+*** pre-run ***
+
+Ensure you have numpy package installed or task7 will fail
+
+*** end pre-run ***
 
 1) activate the environment
     - source /home/student/jmanches/bin/activate
