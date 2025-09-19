@@ -1,3 +1,5 @@
+#test\test_task5.py
+
 from task5 import print_book, favorite_books, student_database
 
 ##################################### tests for book list #########################################

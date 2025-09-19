@@ -4,6 +4,8 @@ import pytest
 from task2 import add, multiply, greet_name, is_positive
 
 '''
+########## my original code before using built in testing #############
+
 def test_add_integers():
     assert add(2, 3) == 5
     assert add(-1, 1) == 0

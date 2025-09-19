@@ -1,5 +1,10 @@
 # src\task7.py
 
+# this is an assignment I did in Computational Linear Algebra
+# it demostrates the use of numpy arrays as a matrix
+# and matrix multiplication that is used for encrypting messages
+# this was two years ago, I should probably refactor this someday?
+
 import numpy as np
 
 # 4x4 key matrices (integers). inv_key reverses key exactly.
@@ -29,7 +34,7 @@ def _text_to_blocks(text: str) -> np.ndarray:
     # make unicode code points for each character
     codes = [ord(ch) for ch in text]
 
-    # pad the list so its length is a multiple of 4
+    # pad the list so its length is a multiple of 4, very important!!
     while len(codes) % 4 != 0:
         codes.append(0)
 
@@ -42,7 +47,7 @@ def _text_to_blocks(text: str) -> np.ndarray:
     return arr
 
 
-# convert 4xn int matrix -> text (strip trailing padding zeros)
+# convert 4xn int matrix -> text (strip trailing padding zeros if added)
 def _blocks_to_text(blocks: np.ndarray) -> str:
     if blocks.size == 0:
         return ""
@@ -79,11 +84,3 @@ def decrypt(cipher: np.ndarray, inv_key: np.ndarray = INV_KEY) -> str:
 # quick round-trip helper
 def roundtrip(text: str) -> str:
     return decrypt(encrypt(text))
-
-
-if __name__ == "__main__":
-    # small demo
-    demo = "The password is: NCS-2014"
-    c = encrypt(demo)
-    p = decrypt(c)
-    print(p)  # should print the original text
