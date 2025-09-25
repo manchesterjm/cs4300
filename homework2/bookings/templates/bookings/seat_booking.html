@@ -1,0 +1,56 @@
+{% extends 'bookings/base.html' %}
+{% block title %}Book Seats · {{ movie.title }}{% endblock %}
+{% block content %}
+<h2>Book Seats for: {{ movie.title }}</h2>
+<p>Release: {{ movie.release_date }} · Duration: {{ movie.duration }} min</p>
+<p>{{ movie.description }}</p>
+<hr>
+
+<!-- Simple seat selector: plain buttons that toggle between [ ] and [X] -->
+<div id="seat-area">
+  {% for seat in seats %}
+    {% if seat.booking_status %}
+      <button type="button" disabled title="Booked">[X] {{ seat.seat_number }} (booked)</button>
+    {% else %}
+      <button type="button" data-seat-id="{{ seat.id }}" data-seat-number="{{ seat.seat_number }}">[ ] {{ seat.seat_number }}</button>
+    {% endif %}
+    {% if forloop.counter|divisibleby:10 %}<br>{% endif %}
+  {% endfor %}
+</div>
+
+<form method="post" action="{% url 'book_seat' movie.id %}">
+  {% csrf_token %}
+  <input type="hidden" id="seat_ids" name="seat_ids" value="">
+  <p>
+    <button type="submit">Confirm Booking</button>
+    <a href="{% url 'movie_list' %}">Cancel</a>
+  </p>
+</form>
+
+{% block extra_js %}{% endblock %}
+<script>
+(function () {
+  // Maintain a Set of selected seat IDs; update hidden input.
+  var selected = new Set();
+  var area = document.getElementById('seat-area');
+  var input = document.getElementById('seat_ids');
+
+  area.addEventListener('click', function (e) {
+    var btn = e.target.closest('button');
+    if (!btn) return;
+    if (btn.disabled) return;
+    var id = btn.getAttribute('data-seat-id');
+    var num = btn.getAttribute('data-seat-number');
+
+    if (selected.has(id)) {
+      selected.delete(id);
+      btn.textContent = "[ ] " + num;
+    } else {
+      selected.add(id);
+      btn.textContent = "[X] " + num;
+    }
+    input.value = Array.from(selected).join(',');
+  });
+})();
+</script>
+{% endblock %}
