@@ -9,7 +9,7 @@
       <li>
         <div><strong>{{ movie.title }}</strong></div>
         <div>Release: {{ movie.release_date }} · Duration: {{ movie.duration }} min</div>
-        <div>Description: {{ movie.description }}</div>
+        <div>{{ movie.description }}</div>
         <div><a href="{% url 'book_seat' movie.id %}">Book Seats</a></div>
         <hr>
       </li>

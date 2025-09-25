@@ -6,13 +6,20 @@
 <p>{{ movie.description }}</p>
 <hr>
 
-<!-- Simple seat selector: plain buttons that toggle between [ ] and [X] -->
+<style>
+  button { margin: 3px; padding: 6px 10px; cursor:pointer; }
+  .avail   { background:#d4f8d4; border:1px solid #2e7d32; color:#113b17; }
+  .booked  { background:#ffd6d6; border:1px solid #b3261e; color:#5a1611; }
+  .selected{ background:#cfe2ff; border:1px solid #0d6efd; color:#0b3d91; }
+  button:disabled{ cursor:not-allowed; }
+</style>
+
 <div id="seat-area">
   {% for seat in seats %}
-    {% if seat.booking_status %}
-      <button type="button" disabled title="Booked">[X] {{ seat.seat_number }} (booked)</button>
+    {% if seat.booking_status == True %}
+      <button type="button" class="booked" disabled title="Booked">{{ seat.seat_number }}</button>
     {% else %}
-      <button type="button" data-seat-id="{{ seat.id }}" data-seat-number="{{ seat.seat_number }}">[ ] {{ seat.seat_number }}</button>
+      <button type="button" class="avail" data-seat-id="{{ seat.id }}" data-seat-number="{{ seat.seat_number }}">{{ seat.seat_number }}</button>
     {% endif %}
     {% if forloop.counter|divisibleby:10 %}<br>{% endif %}
   {% endfor %}
@@ -27,27 +34,26 @@
   </p>
 </form>
 
-{% block extra_js %}{% endblock %}
 <script>
 (function () {
-  // Maintain a Set of selected seat IDs; update hidden input.
   var selected = new Set();
   var area = document.getElementById('seat-area');
   var input = document.getElementById('seat_ids');
 
   area.addEventListener('click', function (e) {
     var btn = e.target.closest('button');
-    if (!btn) return;
-    if (btn.disabled) return;
+    if (!btn || btn.disabled) return;
+
     var id = btn.getAttribute('data-seat-id');
-    var num = btn.getAttribute('data-seat-number');
 
     if (selected.has(id)) {
       selected.delete(id);
-      btn.textContent = "[ ] " + num;
+      btn.classList.remove('selected');
+      btn.classList.add('avail');
     } else {
       selected.add(id);
-      btn.textContent = "[X] " + num;
+      btn.classList.remove('avail');
+      btn.classList.add('selected');
     }
     input.value = Array.from(selected).join(',');
   });

@@ -1,43 +1,24 @@
 from pathlib import Path
 
-# ---------------------------------------------------------
-# Paths
-# ---------------------------------------------------------
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# ---------------------------------------------------------
-# Security / Debug
-# ---------------------------------------------------------
 SECRET_KEY = "dev-secret-key-change-me"
 DEBUG = True
 
-# Your app is proxied under /proxy/8000 and reached via editor-jmanchester-20.devedu.io
-ALLOWED_HOSTS = [
-    "*",                        # okay for class/dev
-    "0.0.0.0",
-    "127.0.0.1",
-    "localhost",
-    "editor-jmanchester-20.devedu.io",
-]
+ALLOWED_HOSTS = ["*", "0.0.0.0", "127.0.0.1", "localhost", "editor-jmanchester-20.devedu.io"]
 
-# Trust the reverse-proxy host/HTTPS info
+# Trust proxy + use proxy path prefix
 USE_X_FORWARDED_HOST = True
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+FORCE_SCRIPT_NAME = "/proxy/8000"   # <— this makes Django emit /proxy/8000/…
 
-# Prefix all reversed URLs with the proxy mount
-FORCE_SCRIPT_NAME = "/proxy/8000"
-
-# Django 5 requires scheme-qualified entries here
 CSRF_TRUSTED_ORIGINS = [
     "https://editor-jmanchester-20.devedu.io",
-    "https://*.devedu.io",   # wildcard for other editor hosts (optional)
+    "https://*.devedu.io",
 ]
 
-# ---------------------------------------------------------
-# Apps
-# ---------------------------------------------------------
 INSTALLED_APPS = [
-    "django.contrib.admin",
+    # "django.contrib.admin",  # ok to keep off; not needed for your assignment
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
@@ -46,9 +27,6 @@ INSTALLED_APPS = [
     "bookings",
 ]
 
-# ---------------------------------------------------------
-# Middleware
-# ---------------------------------------------------------
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -61,9 +39,6 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = "movie_theater_booking.urls"
 
-# ---------------------------------------------------------
-# Templates
-# ---------------------------------------------------------
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
@@ -82,9 +57,6 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "movie_theater_booking.wsgi.application"
 
-# ---------------------------------------------------------
-# Database
-# ---------------------------------------------------------
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
@@ -92,9 +64,6 @@ DATABASES = {
     }
 }
 
-# ---------------------------------------------------------
-# Password validation
-# ---------------------------------------------------------
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
     {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
@@ -102,17 +71,12 @@ AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]
 
-# ---------------------------------------------------------
-# I18N
-# ---------------------------------------------------------
 LANGUAGE_CODE = "en-us"
 TIME_ZONE = "UTC"
 USE_I18N = True
 USE_TZ = True
 
-# ---------------------------------------------------------
-# Static files
-# ---------------------------------------------------------
+# Static (prefix-aware)
 STATIC_URL = f"{FORCE_SCRIPT_NAME}/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 STATICFILES_DIRS = []
