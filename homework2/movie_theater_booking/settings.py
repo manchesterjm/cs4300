@@ -1,34 +1,55 @@
 from pathlib import Path
+import os
+import dj_database_url
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-SECRET_KEY = "dev-secret-key-change-me"
-DEBUG = True
 
-ALLOWED_HOSTS = ["*", "0.0.0.0", "127.0.0.1", "localhost", "editor-jmanchester-20.devedu.io"]
+# -----------------------------------------------------------------------------
+# Basic
+# -----------------------------------------------------------------------------
+SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "dev-secret-key-change-me")
+DEBUG = os.getenv("DJANGO_DEBUG", "False").lower() == "true"
 
-# behind https proxy with path prefix
-USE_X_FORWARDED_HOST = True
-SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
-FORCE_SCRIPT_NAME = "/proxy/8000"
-
-CSRF_TRUSTED_ORIGINS = [
-    "https://editor-jmanchester-20.devedu.io",
-    "https://*.devedu.io",
+# DevEDU proxy host is fine in dev; in production we allow .onrender.com
+ALLOWED_HOSTS = [
+    "127.0.0.1",
+    "0.0.0.0",
+    "localhost",
+    os.getenv("RENDER_EXTERNAL_HOSTNAME", ""),   # Render injects this
+    "editor-jmanchester-20.devedu.io",
+    "app-jmanchester-20.devedu.io",
 ]
 
+# Trust Render domain for CSRF in production
+CSRF_TRUSTED_ORIGINS = [
+    "https://*.onrender.com",
+    "https://editor-jmanchester-20.devedu.io",
+    "https://app-jmanchester-20.devedu.io",
+]
+
+# In DevEDU we’re behind a path prefix. In production we’re not.
+FORCE_SCRIPT_NAME = "/proxy/8000" if os.getenv("USE_DEVEDU_PROXY", "1") == "1" else None
+USE_X_FORWARDED_HOST = True
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+
+# -----------------------------------------------------------------------------
+# Apps
+# -----------------------------------------------------------------------------
 INSTALLED_APPS = [
-    # "django.contrib.admin",        # optional for this assignment
+    # "django.contrib.admin",  # optional
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    "rest_framework",               # <-- DRF
+    "rest_framework",
     "bookings",
 ]
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    # WhiteNoise must be just after SecurityMiddleware
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -57,30 +78,41 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "movie_theater_booking.wsgi.application"
 
+# -----------------------------------------------------------------------------
+# Database: default to SQLite; override on Render with DATABASE_URL
+# -----------------------------------------------------------------------------
 DATABASES = {
-    "default": {"ENGINE": "django.db.backends.sqlite3", "NAME": BASE_DIR / "db.sqlite3"}
+    "default": {
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": BASE_DIR / "db.sqlite3",
+    }
 }
+if os.getenv("DATABASE_URL"):
+    DATABASES["default"] = dj_database_url.config(
+        env="DATABASE_URL", conn_max_age=600, ssl_require=True
+    )
 
-AUTH_PASSWORD_VALIDATORS = [
-    {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
-    {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
-    {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
-    {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
-]
+# -----------------------------------------------------------------------------
+# Static files via WhiteNoise
+# -----------------------------------------------------------------------------
+STATIC_URL = "/static/"
+STATIC_ROOT = BASE_DIR / "staticfiles"
+STATICFILES_DIRS = []
+STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
+# -----------------------------------------------------------------------------
+# i18n / misc
+# -----------------------------------------------------------------------------
 LANGUAGE_CODE = "en-us"
 TIME_ZONE = "UTC"
 USE_I18N = True
 USE_TZ = True
-
-STATIC_URL = f"{FORCE_SCRIPT_NAME}/static/"
-STATIC_ROOT = BASE_DIR / "staticfiles"
-STATICFILES_DIRS = []
-
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-# Simple, open API for the assignment (no auth/CSRF headaches)
+# -----------------------------------------------------------------------------
+# DRF (open API for course)
+# -----------------------------------------------------------------------------
 REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.AllowAny"],
-    "DEFAULT_AUTHENTICATION_CLASSES": [],  # no session/basic auth
+    "DEFAULT_AUTHENTICATION_CLASSES": [],
 }
