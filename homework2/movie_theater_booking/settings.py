@@ -10,21 +10,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "dev-secret-key-change-me")
 DEBUG = os.getenv("DJANGO_DEBUG", "False").lower() == "true"
 
-# DevEDU proxy host is fine in dev; in production we allow .onrender.com
-ALLOWED_HOSTS = [
-    "127.0.0.1",
-    "0.0.0.0",
-    "localhost",
-    os.getenv("RENDER_EXTERNAL_HOSTNAME", ""),   # Render injects this
-    "editor-jmanchester-20.devedu.io",
-    "app-jmanchester-20.devedu.io",
-]
+# Allow Render host + DevEDU (if you still use it)
+ALLOWED_HOSTS = ["*"]  # or put your exact host(s)
 
-# Trust Render domain for CSRF in production
 CSRF_TRUSTED_ORIGINS = [
     "https://*.onrender.com",
-    "https://editor-jmanchester-20.devedu.io",
-    "https://app-jmanchester-20.devedu.io",
+    "https://*.devedu.io",
 ]
 
 # In DevEDU we’re behind a path prefix. In production we’re not.
