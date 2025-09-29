@@ -1,62 +1,76 @@
-{% extends 'bookings/base.html' %}
-{% block title %}Book Seats · {{ movie.title }}{% endblock %}
+{% extends "bookings/base.html" %}
 {% block content %}
 <h2>Book Seats for: {{ movie.title }}</h2>
-<p>Release: {{ movie.release_date }} · Duration: {{ movie.duration }} min</p>
+<p>
+  Release: {{ movie.release_date|date:"M. j, Y" }} · Duration: {{ movie.duration }} min
+</p>
 <p>{{ movie.description }}</p>
+
 <hr>
 
-<style>
-  button { margin: 3px; padding: 6px 10px; cursor:pointer; }
-  .avail   { background:#d4f8d4; border:1px solid #2e7d32; color:#113b17; }
-  .booked  { background:#ffd6d6; border:1px solid #b3261e; color:#5a1611; }
-  .selected{ background:#cfe2ff; border:1px solid #0d6efd; color:#0b3d91; }
-  button:disabled{ cursor:not-allowed; }
-</style>
-
-<div id="seat-area">
-  {% for seat in seats %}
-    {% if seat.id in booked_ids %}
-      <button type="button" class="booked" disabled title="Booked">{{ seat.seat_number }}</button>
-    {% else %}
-      <button type="button" class="avail" data-seat-id="{{ seat.id }}" data-seat-number="{{ seat.seat_number }}">{{ seat.seat_number }}</button>
-    {% endif %}
-    {% if forloop.counter|divisibleby:10 %}<br>{% endif %}
-  {% endfor %}
-</div>
-
-<form method="post" action="{% url 'book_seat' movie.id %}">
+<form method="post">
   {% csrf_token %}
-  <input type="hidden" id="seat_ids" name="seat_ids" value="">
-  <p>
+
+  <div id="seats">
+    {% for seat in seats %}
+      <label class="seat-label">
+        <input type="checkbox" name="seats" value="{{ seat.id }}" {% if seat.booked %}disabled{% endif %}>
+        <button type="button"
+                class="seat-btn {% if seat.booked %}booked{% else %}available{% endif %}"
+                data-seat-id="{{ seat.id }}">
+          {{ seat.number }}
+        </button>
+      </label>
+    {% endfor %}
+  </div>
+
+  <div style="margin-top:1rem;">
     <button type="submit">Confirm Booking</button>
     <a href="{% url 'movie_list' %}">Cancel</a>
-  </p>
+  </div>
 </form>
 
+<style>
+  /* keep it dead simple and readable */
+  .seat-label {
+    display: inline-flex;
+    align-items: center;
+    margin: 0.25rem 0.25rem 0 0;
+  }
+  .seat-label input[type="checkbox"] {
+    /* hide the checkbox but keep it focusable and accessible */
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+  .seat-btn {
+    border: 1px solid #444;
+    padding: 6px 10px;        /* ensures text is visible */
+    background: #eee;
+    color: #000;
+    font: 14px/1.1 system-ui, sans-serif;
+    cursor: pointer;
+    border-radius: 4px;
+  }
+  .seat-btn.available { background: #c6f6d5; }   /* green */
+  .seat-btn.booked    { background: #f8cccc; cursor: not-allowed; } /* red */
+  .seat-btn.selected  { background: #cfe8ff; }  /* blue when toggled */
+</style>
+
 <script>
-(function () {
-  var selected = new Set();
-  var area = document.getElementById('seat-area');
-  var input = document.getElementById('seat_ids');
+  // Toggle selection color without altering label text
+  document.querySelectorAll('.seat-label').forEach(function (label) {
+    const box = label.querySelector('input[type="checkbox"]');
+    const btn = label.querySelector('.seat-btn');
 
-  area.addEventListener('click', function (e) {
-    var btn = e.target.closest('button');
-    if (!btn || btn.disabled) return;
+    if (!box || !btn) return;
 
-    var id = btn.getAttribute('data-seat-id');
-
-    if (selected.has(id)) {
-      selected.delete(id);
-      btn.classList.remove('selected');
-      btn.classList.add('avail');
-    } else {
-      selected.add(id);
-      btn.classList.remove('avail');
-      btn.classList.add('selected');
-    }
-    input.value = Array.from(selected).join(',');
+    btn.addEventListener('click', function () {
+      if (btn.classList.contains('booked')) return; // ignore booked
+      box.checked = !box.checked;
+      btn.classList.toggle('selected', box.checked);
+    });
   });
-})();
 </script>
 {% endblock %}
