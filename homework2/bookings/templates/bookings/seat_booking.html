@@ -16,7 +16,7 @@
 
 <div id="seat-area">
   {% for seat in seats %}
-    {% if seat.booking_status == True %}
+    {% if seat.id in booked_ids %}
       <button type="button" class="booked" disabled title="Booked">{{ seat.seat_number }}</button>
     {% else %}
       <button type="button" class="avail" data-seat-id="{{ seat.id }}" data-seat-number="{{ seat.seat_number }}">{{ seat.seat_number }}</button>
