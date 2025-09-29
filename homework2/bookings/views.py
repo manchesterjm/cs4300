@@ -1,91 +1,139 @@
-from django.shortcuts import render, get_object_or_404, redirect
-from django.contrib import messages
-from django.utils import timezone
+from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse
-from django.contrib.auth import get_user_model
+from django.utils import timezone
+from django.db import transaction
+from django.contrib import messages
 
 from .models import Movie, Seat, Booking
 
-User = get_user_model()
+import os
+from datetime import date
 
-def _guest_user():
-    guest, _ = User.objects.get_or_create(username="guest", defaults={"is_active": False})
-    return guest
+
+def _maybe_auto_seed():
+    """
+    Seed a default movie + seats on Render when DB is empty.
+    Triggered only if AUTO_SEED=1 and there are no movies yet.
+    Safe to call multiple times (idempotent).
+    """
+    if os.environ.get("AUTO_SEED") != "1":
+        return
+
+    if Movie.objects.exists():
+        return
+
+    m = Movie.objects.create(
+        title="Sample Movie",
+        description="Demo",
+        release_date=date(2025, 1, 1),
+        duration=120,
+    )
+    # Create A1..A8 seats if they don't exist
+    for i in range(1, 9):
+        Seat.objects.get_or_create(seat_number=f"A{i}")
+
 
 def movie_list(request):
+    _maybe_auto_seed()
     movies = Movie.objects.all().order_by("title")
     return render(request, "bookings/movie_list.html", {"movies": movies})
 
-def book_seat(request, movie_id: int):
-    """
-    Shows seats + books seats.
-    IMPORTANT: Availability is computed from Booking table (not Seat.booking_status).
-    """
-    movie = get_object_or_404(Movie, pk=movie_id)
-    seats = list(Seat.objects.all().order_by("seat_number"))
 
-    # Ground truth: currently booked seat IDs
-    booked_ids = set(Booking.objects.values_list("seat_id", flat=True))
+def book_seat(request, movie_id):
+    movie = get_object_or_404(Movie, id=movie_id)
+
+    # seats available / booked derived from Bookings (source of truth)
+    seats = list(Seat.objects.all().order_by("seat_number"))
+    booked_seat_ids = set(
+        Booking.objects.filter(movie=movie).values_list("seat_id", flat=True)
+    )
 
     if request.method == "POST":
-        raw = request.POST.get("seat_ids", "")
-        ids = [s for s in raw.split(",") if s.strip()]
+        # seat ids come from checkboxes named "seats"
+        selected_ids = request.POST.getlist("seats")
         try:
-            requested_ids = {int(x) for x in ids}
+            selected_ids = [int(s) for s in selected_ids]
         except ValueError:
-            messages.error(request, "Invalid seat selection.")
+            selected_ids = []
+
+        if not selected_ids:
+            messages.error(request, "Please select at least one seat.")
             return redirect(reverse("book_seat", args=[movie.id]))
 
-        if not requested_ids:
-            messages.warning(request, "Please select at least one seat.")
-            return redirect(reverse("book_seat", args=[movie.id]))
-
-        # Re-check against current bookings to avoid race/mismatch
-        booked_now = set(Booking.objects.values_list("seat_id", flat=True))
-        already = sorted(requested_ids & booked_now)
+        # Which selected are already booked?
+        already = [
+            Seat.objects.get(id=sid).seat_number
+            for sid in selected_ids
+            if sid in booked_seat_ids
+        ]
         if already:
-            names = ", ".join(Seat.objects.filter(id__in=already).values_list("seat_number", flat=True))
-            messages.error(request, f"One or more selected seats are already booked: {names}.")
+            messages.error(
+                request,
+                "One or more selected seats are already booked: " + ", ".join(already),
+            )
             return redirect(reverse("book_seat", args=[movie.id]))
 
-        who = request.user if getattr(request.user, "is_authenticated", False) else _guest_user()
-        for seat in Seat.objects.filter(id__in=requested_ids):
-            Booking.objects.create(movie=movie, seat=seat, booking_date=timezone.now(), user=who)
-            # Keep optional Seat.booking_status in sync if it exists
-            if hasattr(seat, "booking_status"):
-                seat.booking_status = True
-                seat.save(update_fields=["booking_status"])
+        # Book atomically to avoid race conditions
+        with transaction.atomic():
+            # Re-check inside transaction
+            current_booked = set(
+                Booking.objects.select_for_update()
+                .filter(movie=movie)
+                .values_list("seat_id", flat=True)
+            )
+            conflict = [
+                Seat.objects.get(id=sid).seat_number
+                for sid in selected_ids
+                if sid in current_booked
+            ]
+            if conflict:
+                messages.error(
+                    request,
+                    "One or more selected seats are already booked: " + ", ".join(conflict),
+                )
+                return redirect(reverse("book_seat", args=[movie.id]))
 
-        messages.success(request, f"Booked {len(requested_ids)} seat(s).")
-        return redirect(reverse("booking_history"))
+            for sid in selected_ids:
+                seat = Seat.objects.get(id=sid)
+                Booking.objects.create(
+                    movie=movie,
+                    seat=seat,
+                    booking_date=timezone.now(),
+                )
+
+        messages.success(request, f"Booked {len(selected_ids)} seat(s).")
+        return redirect("booking_history")
+
+    # GET: render page with availability flags
+    seat_infos = []
+    for seat in seats:
+        seat_infos.append(
+            {
+                "id": seat.id,
+                "number": seat.seat_number,
+                "booked": seat.id in booked_seat_ids,
+            }
+        )
 
     return render(
         request,
         "bookings/seat_booking.html",
-        {
-            "movie": movie,
-            "seats": seats,
-            "booked_ids": list(booked_ids),   # <-- pass ground-truth booked ids to template
-        },
+        {"movie": movie, "seats": seat_infos, "total_seats": len(seats)},
     )
 
+
 def booking_history(request):
-    bookings = Booking.objects.select_related("movie", "seat").order_by("-booking_date")
+    bookings = (
+        Booking.objects.select_related("movie", "seat")
+        .order_by("-booking_date")
+    )
     return render(request, "bookings/booking_history.html", {"bookings": bookings})
 
-def cancel_booking(request, booking_id: int):
+
+def cancel_booking(request, booking_id):
     if request.method != "POST":
-        messages.error(request, "Invalid request method.")
-        return redirect(reverse("booking_history"))
-
-    b = get_object_or_404(Booking, pk=booking_id)
-    seat = b.seat
-    b.delete()
-
-    # Keep optional Seat.booking_status in sync if present
-    if hasattr(seat, "booking_status"):
-        seat.booking_status = False
-        seat.save(update_fields=["booking_status"])
-
-    messages.success(request, f"Canceled booking for Seat {seat.seat_number}.")
-    return redirect(reverse("booking_history"))
+        return redirect("booking_history")
+    booking = get_object_or_404(Booking, id=booking_id)
+    booking.delete()
+    messages.success(request, "Booking canceled.")
+    return redirect("booking_history")
