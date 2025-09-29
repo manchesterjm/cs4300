@@ -1,16 +1,15 @@
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-
 SECRET_KEY = "dev-secret-key-change-me"
 DEBUG = True
 
 ALLOWED_HOSTS = ["*", "0.0.0.0", "127.0.0.1", "localhost", "editor-jmanchester-20.devedu.io"]
 
-# Trust proxy + use proxy path prefix
+# behind https proxy with path prefix
 USE_X_FORWARDED_HOST = True
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
-FORCE_SCRIPT_NAME = "/proxy/8000"   # <— this makes Django emit /proxy/8000/…
+FORCE_SCRIPT_NAME = "/proxy/8000"
 
 CSRF_TRUSTED_ORIGINS = [
     "https://editor-jmanchester-20.devedu.io",
@@ -18,12 +17,13 @@ CSRF_TRUSTED_ORIGINS = [
 ]
 
 INSTALLED_APPS = [
-    # "django.contrib.admin",  # ok to keep off; not needed for your assignment
+    # "django.contrib.admin",        # optional for this assignment
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "rest_framework",               # <-- DRF
     "bookings",
 ]
 
@@ -58,10 +58,7 @@ TEMPLATES = [
 WSGI_APPLICATION = "movie_theater_booking.wsgi.application"
 
 DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
-    }
+    "default": {"ENGINE": "django.db.backends.sqlite3", "NAME": BASE_DIR / "db.sqlite3"}
 }
 
 AUTH_PASSWORD_VALIDATORS = [
@@ -76,9 +73,14 @@ TIME_ZONE = "UTC"
 USE_I18N = True
 USE_TZ = True
 
-# Static (prefix-aware)
 STATIC_URL = f"{FORCE_SCRIPT_NAME}/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 STATICFILES_DIRS = []
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+# Simple, open API for the assignment (no auth/CSRF headaches)
+REST_FRAMEWORK = {
+    "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.AllowAny"],
+    "DEFAULT_AUTHENTICATION_CLASSES": [],  # no session/basic auth
+}
