@@ -1,29 +1,21 @@
-{% extends "base.html" %}
-{% block title %}Now Showing{% endblock %}
-
+{% extends 'bookings/base.html' %}
+{% block title %}Movies{% endblock %}
 {% block content %}
-  <div class="row g-4">
-    {% if movies %}
-      {% for movie in movies %}
-        <div class="col-12 col-md-6 col-lg-4">
-          <div class="card shadow-sm h-100">
-            <div class="card-body d-flex flex-column">
-              <h5 class="card-title mb-1">{{ movie.title }}</h5>
-              <p class="text-muted small mb-2">
-                Release: {{ movie.release_date|date:"M j, Y" }} · Duration: {{ movie.duration }} min
-              </p>
-              <p class="card-text flex-grow-1">{{ movie.description }}</p>
-              <a class="btn btn-primary w-100 mt-2" href="{% url 'book_seat' movie.id %}">Book Seats</a>
-            </div>
-          </div>
-        </div>
-      {% endfor %}
-    {% else %}
-      <div class="col-12">
-        <div class="card">
-          <div class="card-body">No movies available yet.</div>
-        </div>
-      </div>
-    {% endif %}
-  </div>
+<h2>Now Showing</h2>
+
+{% if movies %}
+  <ul>
+    {% for movie in movies %}
+      <li>
+        <div><strong>{{ movie.title }}</strong></div>
+        <div>Release: {{ movie.release_date }} · Duration: {{ movie.duration }} min</div>
+        <div>{{ movie.description }}</div>
+        <div><a href="{% url 'book_seat' movie.id %}">Book Seats</a></div>
+        <hr>
+      </li>
+    {% endfor %}
+  </ul>
+{% else %}
+  <p>No movies available yet.</p>
+{% endif %}
 {% endblock %}
