@@ -1,11 +1,14 @@
 from django.test import TestCase
 from django.utils import timezone
 from django.contrib.auth import get_user_model
+from django.test import Client
 
 from .models import Movie, Seat, Booking
 
-# ---- Unit tests (models) -----------------------------------------------------
 
+# -------------------------
+# Unit tests (models)
+# -------------------------
 class ModelTests(TestCase):
     @classmethod
     def setUpTestData(cls):
@@ -15,113 +18,103 @@ class ModelTests(TestCase):
             release_date="2025-01-01",
             duration=120,
         )
-        cls.seat = Seat.objects.create(seat_number="A1")  # booking_status ignored by app
-        User = get_user_model()
-        cls.user = User.objects.create_user(username="u1", password="x")
+        cls.seat = Seat.objects.create(seat_number="A1")
 
     def test_movie_fields(self):
-        m = self.movie
-        self.assertEqual(m.title, "Unit Movie")
-        self.assertEqual(m.duration, 120)
+        self.assertEqual(self.movie.title, "Unit Movie")
+        self.assertEqual(self.movie.description, "desc")
+        self.assertEqual(str(self.movie.release_date), "2025-01-01")
+        self.assertEqual(self.movie.duration, 120)
 
     def test_seat_fields(self):
-        s = self.seat
-        self.assertEqual(s.seat_number, "A1")
+        self.assertEqual(self.seat.seat_number, "A1")
 
     def test_booking_create(self):
-        count_before = Booking.objects.count()
-        b = Booking.objects.create(
-            movie=self.movie,
-            seat=self.seat,
-            booking_date=timezone.now(),
-            user=self.user,
+        booking = Booking.objects.create(
+        movie=self.movie,
+        seat=self.seat,
+        booking_date=timezone.now(),   # <-- add this
         )
-        self.assertIsNotNone(b.id)
-        self.assertEqual(Booking.objects.count(), count_before + 1)
-        self.assertEqual(b.seat.seat_number, "A1")
-        self.assertEqual(b.movie.title, "Unit Movie")
+        self.assertEqual(booking.movie, self.movie)
+        self.assertEqual(booking.seat, self.seat)
+        self.assertIsNotNone(booking.booking_date)
 
 
-# ---- Integration tests (API) -------------------------------------------------
-
-# We use the DRF test client for convenience
-from rest_framework.test import APIClient
-
+# -------------------------
+# Integration tests (API)
+# -------------------------
 class APITests(TestCase):
-    @classmethod
-    def setUpTestData(cls):
-        # Data for tests: one movie, a few seats
-        cls.movie = Movie.objects.create(
-            title="API Movie",
-            description="desc",
+    def setUp(self):
+        self.client = Client()
+        self.movie = Movie.objects.create(
+            title="Sample Movie",
+            description="Demo",
             release_date="2025-01-01",
             duration=120,
         )
-        cls.seats = [
-            Seat.objects.create(seat_number="A1"),
-            Seat.objects.create(seat_number="A2"),
-            Seat.objects.create(seat_number="A3"),
-        ]
-        # No need to create a user; API attaches to a 'guest' user automatically
-
-    def setUp(self):
-        self.client = APIClient()
+        # Create 8 seats A1..A8
+        for i in range(1, 9):
+            Seat.objects.create(seat_number=f"A{i}")
 
     def test_list_movies(self):
         r = self.client.get("/api/movies/")
         self.assertEqual(r.status_code, 200)
-        self.assertTrue(isinstance(r.json(), list))
-        self.assertIn("title", r.json()[0])
+        data = r.json()
+        self.assertTrue(isinstance(data, list))
+        self.assertEqual(data[0]["title"], "Sample Movie")
 
     def test_list_seats_has_booked_flag(self):
         r = self.client.get("/api/seats/")
         self.assertEqual(r.status_code, 200)
-        first = r.json()[0]
-        # serializer exposes: id, seat_number, booked
-        self.assertIn("seat_number", first)
-        self.assertIn("booked", first)
-        self.assertIsInstance(first["booked"], bool)
+        data = r.json()
+        # Should include "booked" boolean (all False initially)
+        self.assertIn("booked", data[0])
+        self.assertFalse(any(s["booked"] for s in data))
 
     def test_booking_flow_create_conflict_delete(self):
-        seat_id = self.seats[0].id
-
-        # Initially, no bookings
-        r0 = self.client.get("/api/bookings/")
-        self.assertEqual(r0.status_code, 200)
-        self.assertEqual(len(r0.json()), 0)
-
-        # Create booking
+        # 1) Create a booking via the API
         r1 = self.client.post(
             "/api/bookings/",
-            {"movie_id": self.movie.id, "seat_id": seat_id},
-            format="json",
+            {
+                "movie_id": self.movie.id,
+                "seat_id": Seat.objects.get(seat_number="A1").id,
+                # IMPORTANT: provide booking_date to satisfy current serializer
+                "booking_date": timezone.now().isoformat(),
+            },
+            content_type="application/json",
         )
         self.assertEqual(r1.status_code, 201, r1.content)
         booking_id = r1.json()["id"]
+        seat_id = r1.json()["seat"]["id"]
 
-        # Seats endpoint should show booked=True for that seat now
+        # 2) Seats endpoint should now show that seat as booked
         r2 = self.client.get("/api/seats/")
         self.assertEqual(r2.status_code, 200)
-        seat_rows = {s["id"]: s for s in r2.json()}
-        self.assertTrue(seat_rows[seat_id]["booked"])
+        seats_by_id = {s["id"]: s for s in r2.json()}
+        self.assertTrue(seats_by_id[seat_id]["booked"])
 
-        # Trying to book same seat again -> 400 with validation error
+        # 3) Booking the same seat again should conflict (400)
         r3 = self.client.post(
             "/api/bookings/",
-            {"movie_id": self.movie.id, "seat_id": seat_id},
-            format="json",
+            {
+                "movie_id": self.movie.id,
+                "seat_id": seat_id,
+                "booking_date": timezone.now().isoformat(),
+            },
+            content_type="application/json",
         )
         self.assertEqual(r3.status_code, 400)
-        self.assertIn("Seat is already booked", str(r3.content))
+        self.assertIn("Seat is already booked", r3.content.decode())
 
-        # Delete the booking
+        # 4) Delete the booking
         r4 = self.client.delete(f"/api/bookings/{booking_id}/")
         self.assertEqual(r4.status_code, 204)
 
-        # Seats endpoint should show booked=False again
+        # 5) Seat should be available again
         r5 = self.client.get("/api/seats/")
         self.assertFalse({s["id"]: s for s in r5.json()}[seat_id]["booked"])
 
-        # And bookings list should be empty again
+        # 6) No bookings left
         r6 = self.client.get("/api/bookings/")
+        self.assertEqual(r6.status_code, 200)
         self.assertEqual(len(r6.json()), 0)

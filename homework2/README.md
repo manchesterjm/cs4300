@@ -1,7 +1,7 @@
 # CS4300/5300 – Homework 2: Movie Theater Booking
 
-Live app: https://<your-render-subdomain>.onrender.com  
-API root (DRF): https://<your-render-subdomain>.onrender.com/api/
+Live app: https://movie-theater-booking-t7cu.onrender.com/
+API root https://movie-theater-booking-t7cu.onrender.com/api/
 
 ## What this app does
 - List movies
@@ -12,6 +12,7 @@ API root (DRF): https://<your-render-subdomain>.onrender.com/api/
 
 ## Local setup
 ```bash
+cd cs4300/homework2
 python -m venv myenv
 source myenv/bin/activate
 pip install -r requirements.txt
@@ -20,7 +21,10 @@ pip install -r requirements.txt
 python manage.py migrate
 python manage.py runserver 0.0.0.0:8000
 
-AI Assistance Disclosure
+# Run tests
+python manage.py test bookings -v 2
+
+## AI Assistance Disclosure
 
 I used ChatGPT (model: GPT-5 Thinking) as a coding assistant during this assignment. The tool was used to help me debug, reason about fixes, and draft small code snippets. I reviewed, edited, and tested all final code myself.
 
